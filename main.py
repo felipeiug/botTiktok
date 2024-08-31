@@ -115,6 +115,7 @@ video_clip = VideoFileClip(
 )
 video_clip = video_clip.loop(duration = audio_clip.duration)
 
+
 # Define o texto, a duração e a posição do texto
 text = "Teste de texto"
 txt_clip = TextClip(text, fontsize=70, color='white', bg_color='transparent', size=video_clip.size)
