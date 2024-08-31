@@ -5,7 +5,6 @@ from transformers import pipeline
 from gtts import gTTS
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 from deep_translator import GoogleTranslator
-from TTS.api import TTS
 
 from utils import request
 
@@ -78,35 +77,12 @@ texto = f"""The article {titulos[0]}, published in {publisher} by {authors}. Is 
 print("Traduzindo todo o texto")
 tradutor = GoogleTranslator(source= language, target= "pt")
 traducao = tradutor.translate(texto)
-traducao = traducao.replace("/", " por ")
 
 # Gerando o audio falado na lingua desejada
 print("Gerando o texto falado TTS")
-texto_final = f"Olá! Está é a página que faz resumo de artigos! {traducao}."
-
-for tts_type in [
-    # 'tts_models/en/ljspeech/tacotron2-DDC',
-    'tts_models/multilingual/multi-dataset/your_tts',
-    # 'tts_models/multilingual/multi-dataset/fast_pitch',
-    'tts_models/pt/cv/vits',
-    # 'tts_models/pt/cv/fast_pitch',
-]:
-    print(f"Gerando audio por {tts_type}")
-    tts = TTS(model_name=tts_type, progress_bar=True)
-    
-    speakers = tts.speakers
-    if speakers:
-        for speaker in ['female-pt-4\n', 'male-pt-3\n']:
-            speak_name = speaker.replace('\n', '')
-
-            tts.tts_to_file(
-                texto_final,
-                file_path=f"audio_gerado_{tts_type.replace('/', '_')}__{speak_name}.wav",
-                speaker=speaker,
-                language='pt-br'
-            )
-    else:
-        tts.tts_to_file(texto_final, file_path=f"audio_gerado_{tts_type.replace('/', '_')}.wav")
+texto_final = f"Olá! Está é a página que faz resumo de artigos. {traducao}."
+tts = gTTS(text=texto_final, lang='pt')
+tts.save("audio_gerado.mp3")
 
 # imagem_clip = ImageClip("sua_imagem.jpg", duration=10)  # Duração de 10 segundos
 
