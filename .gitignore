@@ -1,6 +1,8 @@
 #Videos gerados
+*.mp3
 *.mp4
 video_gerado.mp4
+created_videos/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
