@@ -4,7 +4,10 @@ from elevenlabs import play, save
 import random
 
 class Voice:
-
+    mask_voices_ids = [
+        None,
+        "IKne3meq5aSn9XLyUdCD"
+    ]
     def __init__(self):
         self.client = ElevenLabs(api_key=os.getenv("ELEVEN_LABS_API_KEY"))
 
@@ -20,17 +23,24 @@ class Voice:
 
         return audio
 
-    def get_voice(self, text, voz:str|None=None):
+    def get_voice(self, text, voice_id:str|None="pNInz6obpgDQGcFmaJgB"): # Defined with Adam Voice.
+        """voice_id = None, random voice"""
+        
         voices = self.client.voices.get_all()
-        voice = random.choice(voices.voices)
 
-        if voz is not None:
+        if voice_id is None:
+            voice_id = None
+            while voice_id in self.mask_voices_ids:
+                voice = random.choice(voices.voices)
+                voice_id = voice.voice_id
+        else:
             for voice_ in voices.voices:
-                if voice_.name == voz:
+                if voice_.voice_id == voice_id:
                     voice = voice_
                     break
+            else:
+                voice = random.choice(voices.voices)
         
-
         audio = self.client.generate(text=text, voice=voice)
         return audio, voice
 
