@@ -1,56 +1,179 @@
 import os
-from elevenlabs.client import ElevenLabs
-from elevenlabs import play, save
 import random
+import glob
+
+from pathlib import Path
+from time import sleep
+from selenium import webdriver
+from selenium.webdriver.common.by import By
 
 class Voice:
-    mask_voices_ids = [
-        None,
-        "IKne3meq5aSn9XLyUdCD"
-    ]
+    # Login
+    xpath_user = "/html/body/div/div[2]/div/div[2]/div/div/div[2]/form/div[1]/input"
+    xpath_pass = "/html/body/div/div[2]/div/div[2]/div/div/div[2]/form/div[2]/input"
+    xpath_btn_entrar = "/html/body/div/div[2]/div/div[2]/div/div/div[2]/form/div[3]/button"
+
+    # Texto e generate
+    xpath_text_unput = "/html/body/div[1]/div[2]/div[4]/div[3]/div/div/div/div[1]/div/textarea"
+    xpath_btn_generate_test = "/html/body/div[1]/div[2]/div[4]/div[3]/div/div/div/div[1]/div/div/div[1]/button/div/div[1]/div[2]/button"
+    xpath_btn_generate = "/html/body/div[1]/div[2]/div[4]/div[3]/div/div/div/div[1]/div/div/button[2]"
+
+    # Vozes
+    xpath_btn_voices = "/html/body/div[1]/div[2]/div[4]/div[3]/div/div/div/div[1]/div/div/div[1]/button"
+    class_voice = "text-sm truncate"
+
+    # Download audio
+    xpath_btn_download = "/html/body/div[1]/div[2]/div[4]/span/div/div[2]/div/div[2]/div[2]/div[3]/button[1]"
+
     def __init__(self):
-        self.client = ElevenLabs(api_key=os.getenv("ELEVEN_LABS_API_KEY"))
+        self.driver = webdriver.Chrome()
+        sleep(0.5)
+        self.driver.get('https://elevenlabs.io/app/speech-synthesis/text-to-speech')
+        sleep(5)
+        self.login_eleven_labs()
 
-    def clone_voice(self, name:str, audios:list[str], description:str|None = None):
-        raise Exception("Esta versão não suporta clone de Voz")
-        voice = self.client.clone(
-            name=name,
-            description=description,
-            files=audios,
-        )
+    def login_eleven_labs(self):
+        print("Login Eleven Labs")
 
-        audio = self.client.generate(text="Olá! Eu sou a voz da Ananda clonada", voice=voice)
+        user = os.getenv("ELEVEN_LABS_USER")
+        password = os.getenv("ELEVEN_LABS_PASS")
 
-        return audio
+        while True:
+            try:
+                user_element = self.driver.find_element(By.XPATH, self.xpath_user)
+                break
+            except Exception as e:
+                pass
 
-    def get_voice(self, text, voice_id:str|None="pNInz6obpgDQGcFmaJgB"): # Defined with Adam Voice.
-        """voice_id = None, random voice"""
+        user_element.send_keys(user)
+
+        password_element = self.driver.find_element(By.XPATH, self.xpath_pass)
+        password_element.send_keys(password)
+
+        btn_element = self.driver.find_element(By.XPATH, self.xpath_btn_entrar)
+        btn_element.click()
+
+        print("Otendo text input")
+        while True:
+            try:
+                self.text_input = self.driver.find_element(By.XPATH, self.xpath_text_unput)
+                self.text_input.click()
+                break
+            except Exception as e:
+                pass
+
+        print("Otendo botão de gerar")
+        if os.getenv("TEST").upper() == "TRUE":
+            self.xpath_btn_generate = self.xpath_btn_generate_test
+        while True:
+            try:
+                self.btn_generate = self.driver.find_element(By.XPATH, self.xpath_btn_generate)
+                break
+            except Exception as e:
+                pass
+    
+    def get_voices(self):
+        sleep(3)
+
+        voices_return = {}
+
+        voices_mask = [
+            "Adam Stone - late night radio",
+            "Shelley - Clear and confident British female",
+            "Archie - English teen youth"
+        ]
+        while len(voices_return) == 0:
+            for class_voice_ in self.class_voice.split(" "):
+                voice_elems = self.driver.find_elements(By.CLASS_NAME, class_voice_)
+
+                for voice in voice_elems:
+                    try:
+                        if voice.get_attribute("class") != self.class_voice:
+                            continue
+                    except Exception as e:
+                        continue
+
+                    if voice.text in voices_mask:
+                        continue
+
+                    voices_return[voice.text] = voice
         
-        voices = self.client.voices.get_all()
+        return voices_return
 
-        if voice_id is None:
-            voice_id = None
-            while voice_id in self.mask_voices_ids:
-                voice = random.choice(voices.voices)
-                voice_id = voice.voice_id
-        else:
-            for voice_ in voices.voices:
-                if voice_.voice_id == voice_id:
-                    voice = voice_
-                    break
-            else:
-                voice = random.choice(voices.voices)
+    def select_voice(self, voice_name:str|None = None):
+        while True:
+            try:
+                print("Escolhendo as vozes")
+
+                # Abrindo as vozes
+                btn = self.driver.find_element(By.XPATH, self.xpath_btn_voices)
+                sleep(1)
+                btn.click()
+                sleep(1)
+
+                voices = self.get_voices()
+                sleep(1)
+
+                if voice_name not in voices:
+                    voice_name = random.choice(list(voices.keys()))
+                
+                voices[voice_name].click()
+                sleep(1)
+                break
+
+            except Exception as e:
+                print(e)
+
+        return voice_name
+
+    def select_most_recently_mp3(self):
+        downloads_path = str(Path.home() / "Downloads")
+        mp3_files = glob.glob(os.path.join(downloads_path, '*.mp3'))
         
-        audio = self.client.generate(text=text, voice=voice)
-        return audio, voice
+        if not mp3_files:
+            raise FileNotFoundError("Nenhum arquivo .mp3 encontrado.")
+
+        mp3_files.sort(key=os.path.getmtime, reverse=True)
+        return mp3_files[0]
+
+    def tts(self, text, voice_name:str|None=None): # Defined with Adam Voice.
+        """voice_name = None, random voice"""
+
+        voice = self.select_voice(voice_name)
+        
+        self.text_input.send_keys(text)
+        sleep(0.5)
+        
+        self.btn_generate.click()
+        sleep(1)
+
+        while True:
+            sleep(10)
+            try:
+                print("Aguardando audio gerado")
+                btn = self.driver.find_element(By.XPATH, self.xpath_btn_download)
+
+                if btn.get_attribute('aria-label') != "Download Audio":
+                    continue
+
+                sleep(1)
+                btn.click()
+                sleep(10)
+                break
+            except Exception as e:
+                pass
+        
+        mp3_file = self.select_most_recently_mp3()
+        sleep(15)
+        return mp3_file, voice
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv(override=True)
 
-    # voice = Voice()
+    voice = Voice()
 
-    # audio = voice.get_voice("Teste de voz aleatória, vamos ver o que sai disso aqui.")
+    print("Eleven Labs Login")
 
-    # save(audio, "ananda.mp3")
-    # play(audio)
+    audio, voz = voice.tts("Teste de texto em português.")
+    print(audio)
