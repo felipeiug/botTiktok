@@ -61,7 +61,7 @@ while artigo is None or len(abstract) < min_len_abstract:
         
         artigo = artigo_data
         
-        abstract = artigo.get('abstract').replace("<jats:p>", "").replace("</jats:p>", "").replace("<jats:title>", "").replace("</jats:title>", "")
+        abstract = artigo.get('abstract').replace("<jats:p>", "").replace("</jats:p>", "").replace("<jats:title>", "").replace("</jats:title>", "").replace("/jats:sec>", "")
         if len(abstract) >= min_len_abstract:
             break
 
