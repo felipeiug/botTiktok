@@ -35,11 +35,11 @@ path += f"/{len(files)}"
 os.makedirs(path, exist_ok=True)
 
 # Obtendo 1 artigo aleatório
-
+min_len_abstract = 500
 artigo = None
 abstract = ""
 n = 0
-while artigo is None or len(abstract) < 300:
+while artigo is None or len(abstract) < min_len_abstract:
     url = f"https://api.crossref.org/works?sample=50"
     artigos:list = request(url)['message']['items']
 
@@ -62,7 +62,7 @@ while artigo is None or len(abstract) < 300:
         artigo = artigo_data
         
         abstract = artigo.get('abstract').replace("<jats:p>", "").replace("</jats:p>", "").replace("<jats:title>", "").replace("</jats:title>", "")
-        if len(abstract) >= 300:
+        if len(abstract) >= min_len_abstract:
             break
 
 publisher = artigo.get('publisher')
